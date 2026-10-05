@@ -13,6 +13,7 @@ var race_started := false
 var race_finished := false
 var start_z := 10.0
 var finish_z := -170.0
+var active_touches := {}
 
 func _ready() -> void:
 	RenderingServer.set_default_clear_color(Color(0.025, 0.03, 0.055))
@@ -23,6 +24,40 @@ func _ready() -> void:
 	_build_rival()
 	_build_hud()
 	_start_countdown()
+
+func _input(event: InputEvent) -> void:
+	if player == null: return
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			active_touches[event.index] = event.position
+		else:
+			active_touches.erase(event.index)
+		_apply_touch_controls()
+	elif event is InputEventScreenDrag:
+		active_touches[event.index] = event.position
+		_apply_touch_controls()
+
+func _apply_touch_controls() -> void:
+	var left := false
+	var right := false
+	var gas := false
+	var brake := false
+	var nitro_touch := false
+	var drift := false
+	for p in active_touches.values():
+		var pos: Vector2 = p
+		if pos.x < 180 and pos.y > 500: left = true
+		elif pos.x < 360 and pos.y > 500: right = true
+		if pos.x > 1070 and pos.y > 500: gas = true
+		if pos.x > 770 and pos.x < 960 and pos.y > 535: brake = true
+		if pos.x > 940 and pos.x < 1120 and pos.y > 410 and pos.y < 550: nitro_touch = true
+		if pos.x > 770 and pos.x < 950 and pos.y > 410 and pos.y < 550: drift = true
+	player.set_control("left", left)
+	player.set_control("right", right)
+	player.set_control("accelerate", gas)
+	player.set_control("brake", brake)
+	player.set_control("nitro", nitro_touch)
+	player.set_control("handbrake", drift)
 
 func _process(delta: float) -> void:
 	if player == null: return
@@ -40,6 +75,7 @@ func _process(delta: float) -> void:
 	if camera:
 		var desired: Vector3 = player.global_transform * Vector3(0, 4.3, 8.5)
 		camera.global_position = camera.global_position.lerp(desired, 1.0 - exp(-7.0 * delta))
+		camera.fov = lerp(camera.fov, 82.0 if player.speed_kph() > 120 else 74.0, 1.0 - exp(-3.0 * delta))
 		var look: Vector3 = player.global_position + (-player.global_transform.basis.z * 5.0) + Vector3.UP
 		camera.look_at(look, Vector3.UP)
 
@@ -123,6 +159,20 @@ func _car_visual(root: Node3D, color: Color, police_car := false) -> void:
 	body.position.y = 0.55
 	body.material_override = _mat(color)
 	root.add_child(body)
+	var hood := MeshInstance3D.new()
+	var hood_mesh := BoxMesh.new()
+	hood_mesh.size = Vector3(1.78,0.18,1.45)
+	hood.mesh = hood_mesh
+	hood.position = Vector3(0,0.84,-1.18)
+	hood.material_override = _mat(color.lightened(0.08))
+	root.add_child(hood)
+	var rear := MeshInstance3D.new()
+	var rear_mesh := BoxMesh.new()
+	rear_mesh.size = Vector3(1.82,0.2,1.0)
+	rear.mesh = rear_mesh
+	rear.position = Vector3(0,0.82,1.45)
+	rear.material_override = _mat(color.darkened(0.08))
+	root.add_child(rear)
 	var cabin := MeshInstance3D.new()
 	var cab := BoxMesh.new()
 	cab.size = Vector3(1.55,0.5,1.9)
@@ -130,6 +180,21 @@ func _car_visual(root: Node3D, color: Color, police_car := false) -> void:
 	cabin.position = Vector3(0,1.0,0.15)
 	cabin.material_override = _mat(Color(0.035,0.055,0.08))
 	root.add_child(cabin)
+	for x in [-0.62,0.62]:
+		var head := OmniLight3D.new()
+		head.position = Vector3(x,0.72,-2.15)
+		head.light_color = Color(0.78,0.9,1.0)
+		head.light_energy = 1.2
+		head.omni_range = 7.0
+		root.add_child(head)
+	for x in [-0.68,0.68]:
+		var tail := MeshInstance3D.new()
+		var tail_mesh := BoxMesh.new()
+		tail_mesh.size = Vector3(0.42,0.16,0.08)
+		tail.mesh = tail_mesh
+		tail.position = Vector3(x,0.68,2.12)
+		tail.material_override = _mat(Color(0.2,0.02,0.02), Color(1.0,0.03,0.01))
+		root.add_child(tail)
 	for x in [-1.0,1.0]:
 		for z in [-1.35,1.35]:
 			var wheel := MeshInstance3D.new()
@@ -168,7 +233,7 @@ func _setup_car(script_path: String, pos: Vector3, color: Color, cop := false):
 func _build_player() -> void:
 	player = _setup_car("res://game/car.gd", Vector3(0,0.2,start_z), Color(0.08,0.55,0.95))
 	camera = Camera3D.new()
-	camera.fov = 72
+	camera.fov = 74
 	camera.position = player.position + Vector3(0,4.3,8.5)
 	add_child(camera)
 
@@ -195,6 +260,7 @@ func _build_hud() -> void:
 	hud_speed = _label(layer, "0 km/h", Vector2(1020,40), 36)
 	hud_heat = _label(layer, "HEAT 1  ★☆☆☆☆", Vector2(35,35), 27)
 	hud_status = _label(layer, "STREET HEAT", Vector2(480,70), 38)
+	_label(layer, "v0.3 • MULTITOUCH", Vector2(520,118), 15)
 	_label(layer, "NITRO", Vector2(1020,92), 18)
 	nitro_bar = ProgressBar.new()
 	nitro_bar.position = Vector2(1020,120)
