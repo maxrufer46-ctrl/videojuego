@@ -68,14 +68,14 @@ func _process(delta: float) -> void:
 			player.enabled_control = false
 			police.enabled_chase = false
 			rival.active = false
-			hud_status.text = "YOU ESCAPED!"
+			hud_status.text = "YOU ESCAPED!  MOST HUNTED"
 	hud_speed.text = str(player.speed_kph()) + " km/h"
 	hud_heat.text = "HEAT " + str(int(ceil(heat))) + "   " + _stars(int(ceil(heat)))
 	nitro_bar.value = player.nitro * 100.0
 	if camera:
-		var desired: Vector3 = player.global_transform * Vector3(0, 4.3, 8.5)
+		var desired: Vector3 = player.global_transform * Vector3(0, 3.2, 7.0)
 		camera.global_position = camera.global_position.lerp(desired, 1.0 - exp(-7.0 * delta))
-		camera.fov = lerp(camera.fov, 82.0 if player.speed_kph() > 120 else 74.0, 1.0 - exp(-3.0 * delta))
+		camera.fov = lerp(camera.fov, 86.0 if player.speed_kph() > 120 else 70.0, 1.0 - exp(-3.0 * delta))
 		var look: Vector3 = player.global_position + (-player.global_transform.basis.z * 5.0) + Vector3.UP
 		camera.look_at(look, Vector3.UP)
 
@@ -147,6 +147,37 @@ func _build_city() -> void:
 			lamp.light_energy = 2.2
 			lamp.omni_range = 11.0
 			add_child(lamp)
+	# Side streets break up the tunnel-like city
+	for z2 in [-15,-55,-95,-135]:
+		_box("CrossRoad", Vector3(0,-0.32,z2), Vector3(55,0.46,12), Color(0.06,0.065,0.075))
+		for side2 in [-1,1]:
+			var neon := OmniLight3D.new()
+			neon.position = Vector3(side2*12.5,3.2,z2)
+			neon.light_color = Color(1.0,0.18,0.08) if z2 % 2 == 0 else Color(0.12,0.5,1.0)
+			neon.light_energy = 3.0
+			neon.omni_range = 10.0
+			add_child(neon)
+	# Roadside barriers, signs and vegetation silhouettes
+	for z3 in range(5,-175,-18):
+		for side3 in [-1,1]:
+			_box("Barrier", Vector3(side3*9.1,0.35,z3), Vector3(0.45,0.7,5.5), Color(0.28,0.29,0.31))
+			var trunk := MeshInstance3D.new()
+			var tm := CylinderMesh.new()
+			tm.top_radius = 0.12
+			tm.bottom_radius = 0.18
+			tm.height = 2.6
+			trunk.mesh = tm
+			trunk.position = Vector3(side3*12.8,1.3,z3+5)
+			trunk.material_override = _mat(Color(0.12,0.07,0.035))
+			add_child(trunk)
+			var crown := MeshInstance3D.new()
+			var sm := SphereMesh.new()
+			sm.radius = 1.2
+			sm.height = 2.1
+			crown.mesh = sm
+			crown.position = Vector3(side3*12.8,3.0,z3+5)
+			crown.material_override = _mat(Color(0.035,0.11,0.055))
+			add_child(crown)
 	_box("FinishL", Vector3(-8.5,1.8,finish_z), Vector3(0.5,3.6,0.5), Color(1,0.2,0.1))
 	_box("FinishR", Vector3(8.5,1.8,finish_z), Vector3(0.5,3.6,0.5), Color(1,0.2,0.1))
 	_box("FinishTop", Vector3(0,3.5,finish_z), Vector3(17.5,0.45,0.5), Color(1,0.65,0.05))
@@ -233,8 +264,8 @@ func _setup_car(script_path: String, pos: Vector3, color: Color, cop := false):
 func _build_player() -> void:
 	player = _setup_car("res://game/car.gd", Vector3(0,0.2,start_z), Color(0.08,0.55,0.95))
 	camera = Camera3D.new()
-	camera.fov = 74
-	camera.position = player.position + Vector3(0,4.3,8.5)
+	camera.fov = 70
+	camera.position = player.position + Vector3(0,3.2,7.0)
 	add_child(camera)
 
 func _build_police() -> void:
@@ -260,7 +291,7 @@ func _build_hud() -> void:
 	hud_speed = _label(layer, "0 km/h", Vector2(1020,40), 36)
 	hud_heat = _label(layer, "HEAT 1  ★☆☆☆☆", Vector2(35,35), 27)
 	hud_status = _label(layer, "STREET HEAT", Vector2(480,70), 38)
-	_label(layer, "v0.3 • MULTITOUCH", Vector2(520,118), 15)
+	_label(layer, "v0.4 • ARCADE DRIVE", Vector2(520,118), 15)
 	_label(layer, "NITRO", Vector2(1020,92), 18)
 	nitro_bar = ProgressBar.new()
 	nitro_bar.position = Vector2(1020,120)
@@ -288,7 +319,8 @@ func _touch_button(parent: Node, text: String, pos: Vector2, size: Vector2, acti
 	b.position = pos
 	b.size = size
 	b.add_theme_font_size_override("font_size", 22)
-	b.modulate = Color(1,1,1,0.78)
+	b.modulate = Color(1,1,1,0.72)
+	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.button_down.connect(func(): player.set_control(action,true))
 	b.button_up.connect(func(): player.set_control(action,false))
 	parent.add_child(b)
