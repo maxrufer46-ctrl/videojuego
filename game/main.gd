@@ -38,9 +38,9 @@ func _process(delta: float) -> void:
 	hud_heat.text = "HEAT " + str(int(ceil(heat))) + "   " + _stars(int(ceil(heat)))
 	nitro_bar.value = player.nitro * 100.0
 	if camera:
-		var desired := player.global_transform * Vector3(0, 4.3, 8.5)
+		var desired: Vector3 = player.global_transform * Vector3(0, 4.3, 8.5)
 		camera.global_position = camera.global_position.lerp(desired, 1.0 - exp(-7.0 * delta))
-		var look := player.global_position + (-player.global_transform.basis.z * 5.0) + Vector3.UP
+		var look: Vector3 = player.global_position + (-player.global_transform.basis.z * 5.0) + Vector3.UP
 		camera.look_at(look, Vector3.UP)
 
 func _stars(count: int) -> String:
