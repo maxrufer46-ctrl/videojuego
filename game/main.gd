@@ -183,6 +183,25 @@ func _build_city() -> void:
 			crown.position = Vector3(side3*12.8,3.0,z3+5)
 			crown.material_override = _mat(Color(0.035,0.11,0.055))
 			add_child(crown)
+	# Landmark zones so the route changes visually as the player advances.
+	for zone in [
+		[Vector3(-13,1.7,-28),Vector3(5,3.4,12),Color(0.16,0.18,0.20)],
+		[Vector3(13,2.2,-74),Vector3(6,4.4,16),Color(0.12,0.16,0.22)],
+		[Vector3(-14,3.0,-122),Vector3(7,6,18),Color(0.20,0.12,0.08)],
+		[Vector3(14,1.6,-158),Vector3(5,3.2,12),Color(0.08,0.17,0.13)]
+	]:
+		_box("Landmark",zone[0],zone[1],zone[2])
+	# Overhead gantries and glowing route gates.
+	for gz in [-40,-88,-142]:
+		_box("GanL",Vector3(-7.8,2.6,gz),Vector3(0.3,5.2,0.3),Color(0.3,0.31,0.34))
+		_box("GanR",Vector3(7.8,2.6,gz),Vector3(0.3,5.2,0.3),Color(0.3,0.31,0.34))
+		_box("GanTop",Vector3(0,5.0,gz),Vector3(15.8,0.3,0.3),Color(0.3,0.31,0.34))
+		var gate_light := OmniLight3D.new()
+		gate_light.position = Vector3(0,4.4,gz)
+		gate_light.light_color = Color(1.0,0.32,0.06)
+		gate_light.light_energy = 4.0
+		gate_light.omni_range = 12.0
+		add_child(gate_light)
 	_box("FinishL", Vector3(-8.5,1.8,finish_z), Vector3(0.5,3.6,0.5), Color(1,0.2,0.1))
 	_box("FinishR", Vector3(8.5,1.8,finish_z), Vector3(0.5,3.6,0.5), Color(1,0.2,0.1))
 	_box("FinishTop", Vector3(0,3.5,finish_z), Vector3(17.5,0.45,0.5), Color(1,0.65,0.05))
