@@ -10,13 +10,13 @@ var touch_right := 0.0
 var touch_nitro := false
 var touch_handbrake := false
 
-const MAX_SPEED := 50.0
+const MAX_SPEED := 58.0
 const MAX_REVERSE := 12.0
-const ACCEL := 18.0
+const ACCEL := 26.0
 const BRAKE := 30.0
 const COAST := 6.0
-const TURN_RATE := 1.65
-const NITRO_EXTRA := 20.0
+const TURN_RATE := 1.9
+const NITRO_EXTRA := 24.0
 
 func set_control(action: String, pressed: bool) -> void:
 	match action:
@@ -69,5 +69,5 @@ func _physics_process(delta: float) -> void:
 		speed = move_toward(speed, 0.0, 10.0 * delta)
 
 	velocity = -transform.basis.z * speed
-	velocity.y = -0.5
+	velocity.y = -3.0
 	move_and_slide()
