@@ -14,6 +14,8 @@ var race_finished := false
 var start_z := 10.0
 var finish_z := -170.0
 var active_touches := {}
+var traffic_cars: Array = []
+var road_phase := 0.0
 
 func _ready() -> void:
 	RenderingServer.set_default_clear_color(Color(0.025, 0.03, 0.055))
@@ -22,6 +24,7 @@ func _ready() -> void:
 	_build_player()
 	_build_police()
 	_build_rival()
+	_build_traffic()
 	_build_hud()
 	_start_countdown()
 
@@ -61,6 +64,7 @@ func _apply_touch_controls() -> void:
 
 func _process(delta: float) -> void:
 	if player == null: return
+	road_phase += delta
 	if race_started and not race_finished:
 		heat = min(5.0, heat + 0.025 * delta)
 		if player.global_position.z < finish_z:
@@ -73,7 +77,8 @@ func _process(delta: float) -> void:
 	hud_heat.text = "HEAT " + str(int(ceil(heat))) + "   " + _stars(int(ceil(heat)))
 	nitro_bar.value = player.nitro * 100.0
 	if camera:
-		var desired: Vector3 = player.global_transform * Vector3(0, 3.2, 7.0)
+		var cam_sway: float = sin(road_phase * 2.2) * min(float(player.speed_kph()) / 220.0, 1.0) * 0.08
+		var desired: Vector3 = player.global_transform * Vector3(cam_sway, 3.05, 6.65)
 		camera.global_position = camera.global_position.lerp(desired, 1.0 - exp(-7.0 * delta))
 		camera.fov = lerp(camera.fov, 86.0 if player.speed_kph() > 120 else 70.0, 1.0 - exp(-3.0 * delta))
 		var look: Vector3 = player.global_position + (-player.global_transform.basis.z * 5.0) + Vector3.UP
@@ -183,32 +188,35 @@ func _build_city() -> void:
 	_box("FinishTop", Vector3(0,3.5,finish_z), Vector3(17.5,0.45,0.5), Color(1,0.65,0.05))
 
 func _car_visual(root: Node3D, color: Color, police_car := false) -> void:
+	# Low-poly muscle-car silhouette optimized for Android.
+	# The detailed Mustang GLB can replace this visual node without changing physics.
+
 	var body := MeshInstance3D.new()
 	var mesh := BoxMesh.new()
-	mesh.size = Vector3(1.9,0.55,4.2)
+	mesh.size = Vector3(1.92,0.42,4.45)
 	body.mesh = mesh
-	body.position.y = 0.55
+	body.position.y = 0.48
 	body.material_override = _mat(color)
 	root.add_child(body)
 	var hood := MeshInstance3D.new()
 	var hood_mesh := BoxMesh.new()
-	hood_mesh.size = Vector3(1.78,0.18,1.45)
+	hood_mesh.size = Vector3(1.82,0.20,1.62)
 	hood.mesh = hood_mesh
-	hood.position = Vector3(0,0.84,-1.18)
+	hood.position = Vector3(0,0.72,-1.32)
 	hood.material_override = _mat(color.lightened(0.08))
 	root.add_child(hood)
 	var rear := MeshInstance3D.new()
 	var rear_mesh := BoxMesh.new()
-	rear_mesh.size = Vector3(1.82,0.2,1.0)
+	rear_mesh.size = Vector3(1.84,0.22,1.15)
 	rear.mesh = rear_mesh
 	rear.position = Vector3(0,0.82,1.45)
 	rear.material_override = _mat(color.darkened(0.08))
 	root.add_child(rear)
 	var cabin := MeshInstance3D.new()
 	var cab := BoxMesh.new()
-	cab.size = Vector3(1.55,0.5,1.9)
+	cab.size = Vector3(1.48,0.48,1.72)
 	cabin.mesh = cab
-	cabin.position = Vector3(0,1.0,0.15)
+	cabin.position = Vector3(0,0.94,0.12)
 	cabin.material_override = _mat(Color(0.035,0.055,0.08))
 	root.add_child(cabin)
 	for x in [-0.62,0.62]:
@@ -261,6 +269,19 @@ func _setup_car(script_path: String, pos: Vector3, color: Color, cop := false):
 	add_child(car)
 	return car
 
+func _build_traffic() -> void:
+	var specs := [
+		[-3.0,-30.0,15.0,-1.0,Color(0.72,0.72,0.76)],
+		[3.0,-68.0,13.0,-1.0,Color(0.18,0.35,0.72)],
+		[-3.0,-112.0,17.0,-1.0,Color(0.82,0.62,0.12)],
+		[3.0,-150.0,14.0,-1.0,Color(0.48,0.12,0.12)],
+		[5.7,-42.0,16.0,1.0,Color(0.65,0.67,0.68)]
+	]
+	for spec in specs:
+		var t = _setup_car("res://game/traffic.gd", Vector3(spec[0],0.2,spec[1]), spec[4])
+		t.setup(spec[0],spec[1],spec[2],spec[3])
+		traffic_cars.append(t)
+
 func _build_player() -> void:
 	player = _setup_car("res://game/car.gd", Vector3(0,0.2,start_z), Color(0.08,0.55,0.95))
 	camera = Camera3D.new()
@@ -290,8 +311,9 @@ func _build_hud() -> void:
 	add_child(layer)
 	hud_speed = _label(layer, "0 km/h", Vector2(1020,40), 36)
 	hud_heat = _label(layer, "HEAT 1  ★☆☆☆☆", Vector2(35,35), 27)
-	hud_status = _label(layer, "STREET HEAT", Vector2(480,70), 38)
-	_label(layer, "v0.4 • ARCADE DRIVE", Vector2(520,118), 15)
+	hud_status = _label(layer, "STREET HEAT // MOST HUNTED", Vector2(420,70), 34)
+	_label(layer, "DISTRICT 01  •  INDUSTRIAL NIGHT", Vector2(465,112), 16)
+	_label(layer, "v0.5 • NIGHT PURSUIT", Vector2(520,118), 15)
 	_label(layer, "NITRO", Vector2(1020,92), 18)
 	nitro_bar = ProgressBar.new()
 	nitro_bar.position = Vector2(1020,120)
