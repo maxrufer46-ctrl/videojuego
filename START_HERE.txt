@@ -1,0 +1,16 @@
+STREET HEAT: MOST HUNTED v0.1
+
+1) Create a blank Unity 3D Core project.
+2) Copy the Assets folder from this repository into the Unity project.
+3) Open Unity.
+4) Click: Street Heat > Build Demo Scene
+5) Press Play.
+
+PC test controls:
+- A/D or Left/Right = steering
+- W/Up = gas
+- S/Down = brake/reverse
+- Left Shift = nitro
+- Space = drift/handbrake
+
+On Android, use the on-screen buttons.
