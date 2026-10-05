@@ -1,0 +1,63 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "project.godot"
+      - "export_presets.cfg"
+      - "game/**"
+      - ".github/workflows/android-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Godot and export templates
+        shell: bash
+        run: |
+          set -e
+          GODOT_VERSION="4.7.2"
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O godot.zip
+          unzip -q godot.zip
+          chmod +x "Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          sudo mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -O templates.tpz
+          mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          unzip -q templates.tpz -d templates
+          cp -r templates/templates/* "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
+
+      - name: Install Android SDK tools
+        uses: android-actions/setup-android@v3
+
+      - name: Configure Android debug keystore
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
+          fi
+
+      - name: Import project
+        run: godot --headless --editor --path . --quit
+
+      - name: Export APK
+        run: |
+          mkdir -p build
+          godot --headless --path . --export-debug "Android" "build/StreetHeatMostHunted-v0.2.apk"
+          test -f "build/StreetHeatMostHunted-v0.2.apk"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: StreetHeatMostHunted-v0.2-APK
+          path: build/StreetHeatMostHunted-v0.2.apk
+          if-no-files-found: error
